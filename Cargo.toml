@@ -1,8 +1,8 @@
 [package]
-name = "parking_lot"
+name = "parking_lot_rt"
 version = "0.12.1"
-authors = ["Amanieu d'Antras <amanieu@gmail.com>"]
-description = "More compact and efficient implementations of the standard synchronization primitives."
+authors = ["Serhij S. <div@altertech.com>"]
+description = "Parking-lot fork for real-time applications"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Amanieu/parking_lot"
 readme = "README.md"

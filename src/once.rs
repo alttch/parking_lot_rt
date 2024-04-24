@@ -10,7 +10,7 @@ use core::{
     fmt, mem,
     sync::atomic::{fence, AtomicU8, Ordering},
 };
-use parking_lot_core::{self, SpinWait, DEFAULT_PARK_TOKEN, DEFAULT_UNPARK_TOKEN};
+use parking_lot_core::{self, DEFAULT_PARK_TOKEN, DEFAULT_UNPARK_TOKEN};
 
 const DONE_BIT: u8 = 1;
 const POISON_BIT: u8 = 2;
@@ -197,7 +197,6 @@ impl Once {
     // without some allocation overhead.
     #[cold]
     fn call_once_slow(&self, ignore_poison: bool, f: &mut dyn FnMut(OnceState)) {
-        let mut spinwait = SpinWait::new();
         let mut state = self.0.load(Ordering::Relaxed);
         loop {
             // If another thread called the closure, we're done
@@ -228,12 +227,6 @@ impl Once {
                     Ok(_) => break,
                     Err(x) => state = x,
                 }
-                continue;
-            }
-
-            // If there is no queue, try spinning a few times
-            if state & PARKED_BIT == 0 && spinwait.spin() {
-                state = self.0.load(Ordering::Relaxed);
                 continue;
             }
 
@@ -268,7 +261,6 @@ impl Once {
             }
 
             // Loop back and check if the done bit was set
-            spinwait.reset();
             state = self.0.load(Ordering::Relaxed);
         }
 

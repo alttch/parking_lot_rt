@@ -678,47 +678,39 @@ impl RawRwLock {
     #[cold]
     fn lock_shared_slow(&self, recursive: bool, timeout: Option<Instant>) -> bool {
         let try_lock = |state: &mut usize| {
-            let mut spinwait_shared = SpinWait::new();
-            loop {
-                // Use hardware lock elision to avoid cache conflicts when multiple
-                // readers try to acquire the lock. We only do this if the lock is
-                // completely empty since elision handles conflicts poorly.
-                if have_elision() && *state == 0 {
-                    match self.state.elision_compare_exchange_acquire(0, ONE_READER) {
-                        Ok(_) => return true,
-                        Err(x) => *state = x,
-                    }
+            // Use hardware lock elision to avoid cache conflicts when multiple
+            // readers try to acquire the lock. We only do this if the lock is
+            // completely empty since elision handles conflicts poorly.
+            if have_elision() && *state == 0 {
+                match self.state.elision_compare_exchange_acquire(0, ONE_READER) {
+                    Ok(_) => return true,
+                    Err(x) => *state = x,
                 }
-
-                // This is the same condition as try_lock_shared_fast
-                #[allow(clippy::collapsible_if)]
-                if *state & WRITER_BIT != 0 {
-                    if !recursive || *state & READERS_MASK == 0 {
-                        return false;
-                    }
-                }
-
-                if self
-                    .state
-                    .compare_exchange_weak(
-                        *state,
-                        state
-                            .checked_add(ONE_READER)
-                            .expect("RwLock reader count overflow"),
-                        Ordering::Acquire,
-                        Ordering::Relaxed,
-                    )
-                    .is_ok()
-                {
-                    return true;
-                }
-
-                // If there is high contention on the reader count then we want
-                // to leave some time between attempts to acquire the lock to
-                // let other threads make progress.
-                spinwait_shared.spin_no_yield();
-                *state = self.state.load(Ordering::Relaxed);
             }
+
+            // This is the same condition as try_lock_shared_fast
+            #[allow(clippy::collapsible_if)]
+            if *state & WRITER_BIT != 0 {
+                if !recursive || *state & READERS_MASK == 0 {
+                    return false;
+                }
+            }
+
+            if self
+                .state
+                .compare_exchange_weak(
+                    *state,
+                    state
+                        .checked_add(ONE_READER)
+                        .expect("RwLock reader count overflow"),
+                    Ordering::Acquire,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
+                return true;
+            }
+            return false;
         };
         self.lock_common(timeout, TOKEN_SHARED, try_lock, WRITER_BIT)
     }
@@ -746,33 +738,25 @@ impl RawRwLock {
     #[cold]
     fn lock_upgradable_slow(&self, timeout: Option<Instant>) -> bool {
         let try_lock = |state: &mut usize| {
-            let mut spinwait_shared = SpinWait::new();
-            loop {
-                if *state & (WRITER_BIT | UPGRADABLE_BIT) != 0 {
-                    return false;
-                }
-
-                if self
-                    .state
-                    .compare_exchange_weak(
-                        *state,
-                        state
-                            .checked_add(ONE_READER | UPGRADABLE_BIT)
-                            .expect("RwLock reader count overflow"),
-                        Ordering::Acquire,
-                        Ordering::Relaxed,
-                    )
-                    .is_ok()
-                {
-                    return true;
-                }
-
-                // If there is high contention on the reader count then we want
-                // to leave some time between attempts to acquire the lock to
-                // let other threads make progress.
-                spinwait_shared.spin_no_yield();
-                *state = self.state.load(Ordering::Relaxed);
+            if *state & (WRITER_BIT | UPGRADABLE_BIT) != 0 {
+                return false;
             }
+
+            if self
+                .state
+                .compare_exchange_weak(
+                    *state,
+                    state
+                        .checked_add(ONE_READER | UPGRADABLE_BIT)
+                        .expect("RwLock reader count overflow"),
+                    Ordering::Acquire,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
+                return true;
+            }
+            return false;
         };
         self.lock_common(
             timeout,
@@ -978,15 +962,8 @@ impl RawRwLock {
     fn wait_for_readers(&self, timeout: Option<Instant>, prev_value: usize) -> bool {
         // At this point WRITER_BIT is already set, we just need to wait for the
         // remaining readers to exit the lock.
-        let mut spinwait = SpinWait::new();
         let mut state = self.state.load(Ordering::Acquire);
         while state & READERS_MASK != 0 {
-            // Spin a few times to wait for readers to exit
-            if spinwait.spin() {
-                state = self.state.load(Ordering::Acquire);
-                continue;
-            }
-
             // Set the parked bit
             if state & WRITER_PARKED_BIT == 0 {
                 if let Err(x) = self.state.compare_exchange_weak(
@@ -1070,18 +1047,11 @@ impl RawRwLock {
         mut try_lock: impl FnMut(&mut usize) -> bool,
         validate_flags: usize,
     ) -> bool {
-        let mut spinwait = SpinWait::new();
         let mut state = self.state.load(Ordering::Relaxed);
         loop {
             // Attempt to grab the lock
             if try_lock(&mut state) {
                 return true;
-            }
-
-            // If there are no parked threads, try spinning a few times.
-            if state & (PARKED_BIT | WRITER_PARKED_BIT) == 0 && spinwait.spin() {
-                state = self.state.load(Ordering::Relaxed);
-                continue;
             }
 
             // Set the parked bit
@@ -1134,7 +1104,6 @@ impl RawRwLock {
             }
 
             // Loop back and try locking again
-            spinwait.reset();
             state = self.state.load(Ordering::Relaxed);
         }
     }

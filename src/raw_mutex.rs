@@ -11,7 +11,7 @@ use core::{
     time::Duration,
 };
 use lock_api::RawMutex as RawMutex_;
-use parking_lot_core::{self, ParkResult, SpinWait, UnparkResult, UnparkToken, DEFAULT_PARK_TOKEN};
+use parking_lot_core::{self, ParkResult, UnparkResult, UnparkToken, DEFAULT_PARK_TOKEN};
 use std::time::Instant;
 
 // UnparkToken used to indicate that that the target thread should attempt to
@@ -208,7 +208,6 @@ impl RawMutex {
 
     #[cold]
     fn lock_slow(&self, timeout: Option<Instant>) -> bool {
-        let mut spinwait = SpinWait::new();
         let mut state = self.state.load(Ordering::Relaxed);
         loop {
             // Grab the lock if it isn't locked, even if there is a queue on it
@@ -222,12 +221,6 @@ impl RawMutex {
                     Ok(_) => return true,
                     Err(x) => state = x,
                 }
-                continue;
-            }
-
-            // If there is no queue, try spinning a few times
-            if state & PARKED_BIT == 0 && spinwait.spin() {
-                state = self.state.load(Ordering::Relaxed);
                 continue;
             }
 
@@ -283,7 +276,6 @@ impl RawMutex {
             }
 
             // Loop back and try locking again
-            spinwait.reset();
             state = self.state.load(Ordering::Relaxed);
         }
     }
