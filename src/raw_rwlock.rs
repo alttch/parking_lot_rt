@@ -14,7 +14,7 @@ use core::{
 };
 use lock_api::{RawRwLock as RawRwLock_, RawRwLockUpgrade};
 use parking_lot_core::{
-    self, deadlock, FilterOp, ParkResult, ParkToken, SpinWait, UnparkResult, UnparkToken,
+    self, deadlock, FilterOp, ParkResult, ParkToken, UnparkResult, UnparkToken,
 };
 use std::time::{Duration, Instant};
 
@@ -710,7 +710,7 @@ impl RawRwLock {
             {
                 return true;
             }
-            return false;
+            false
         };
         self.lock_common(timeout, TOKEN_SHARED, try_lock, WRITER_BIT)
     }
@@ -756,7 +756,7 @@ impl RawRwLock {
             {
                 return true;
             }
-            return false;
+            false
         };
         self.lock_common(
             timeout,
