@@ -61,7 +61,7 @@ impl WaitTimeoutResult {
 /// # Examples
 ///
 /// ```
-/// use parking_lot::{Mutex, Condvar};
+/// use parking_lot_rt::{Mutex, Condvar};
 /// use std::sync::Arc;
 /// use std::thread;
 ///
@@ -114,7 +114,7 @@ impl Condvar {
     /// # Examples
     ///
     /// ```
-    /// use parking_lot::Condvar;
+    /// use parking_lot_rt::Condvar;
     ///
     /// let condvar = Condvar::new();
     ///

@@ -1,4 +1,4 @@
-use parking_lot::RwLock;
+use parking_lot_rt::RwLock;
 use std::thread;
 
 struct Bar(RwLock<()>);

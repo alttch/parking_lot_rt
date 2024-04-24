@@ -66,7 +66,7 @@ impl OnceState {
 /// # Examples
 ///
 /// ```
-/// use parking_lot::Once;
+/// use parking_lot_rt::Once;
 ///
 /// static START: Once = Once::new();
 ///
@@ -115,7 +115,7 @@ impl Once {
     /// # Examples
     ///
     /// ```
-    /// use parking_lot::Once;
+    /// use parking_lot_rt::Once;
     ///
     /// static mut VAL: usize = 0;
     /// static INIT: Once = Once::new();

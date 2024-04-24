@@ -66,7 +66,7 @@ use crate::raw_rwlock::RawRwLock;
 /// # Examples
 ///
 /// ```
-/// use parking_lot::RwLock;
+/// use parking_lot_rt::RwLock;
 ///
 /// let lock = RwLock::new(5);
 ///

@@ -43,7 +43,7 @@ use crate::raw_fair_mutex::RawFairMutex;
 /// # Examples
 ///
 /// ```
-/// use parking_lot::FairMutex;
+/// use parking_lot_rt::FairMutex;
 /// use std::sync::{Arc, mpsc::channel};
 /// use std::thread;
 ///

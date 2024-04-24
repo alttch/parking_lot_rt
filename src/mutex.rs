@@ -52,7 +52,7 @@ use crate::raw_mutex::RawMutex;
 /// # Examples
 ///
 /// ```
-/// use parking_lot::Mutex;
+/// use parking_lot_rt::Mutex;
 /// use std::sync::{Arc, mpsc::channel};
 /// use std::thread;
 ///

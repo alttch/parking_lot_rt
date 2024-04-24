@@ -9,7 +9,7 @@
 //! { // only for #[cfg]
 //! use std::thread;
 //! use std::time::Duration;
-//! use parking_lot::deadlock;
+//! use parking_lot_rt::deadlock;
 //!
 //! // Create a background thread which checks for deadlocks every 10s
 //! thread::spawn(move || {
