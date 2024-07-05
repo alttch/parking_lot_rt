@@ -42,7 +42,7 @@ impl<T> Mutex<T> for std::sync::Mutex<T> {
     }
 }
 
-impl<T> Mutex<T> for parking_lot::Mutex<T> {
+impl<T> Mutex<T> for parking_lot_rt::Mutex<T> {
     fn new(v: T) -> Self {
         Self::new(v)
     }
@@ -53,7 +53,7 @@ impl<T> Mutex<T> for parking_lot::Mutex<T> {
         f(&mut *self.lock())
     }
     fn name() -> &'static str {
-        "parking_lot::Mutex"
+        "parking_lot_rt::Mutex"
     }
 }
 
@@ -71,15 +71,14 @@ unsafe impl<T: Send> Send for SrwLock<T> {}
 #[cfg(windows)]
 impl<T> Mutex<T> for SrwLock<T> {
     fn new(v: T) -> Self {
-        let mut h: synchapi::SRWLOCK = synchapi::SRWLOCK { Ptr: std::ptr::null_mut() };
+        let mut h: synchapi::SRWLOCK = synchapi::SRWLOCK {
+            Ptr: std::ptr::null_mut(),
+        };
 
         unsafe {
             synchapi::InitializeSRWLock(&mut h);
         }
-        SrwLock(
-            UnsafeCell::new(v),
-            UnsafeCell::new(h),
-        )
+        SrwLock(UnsafeCell::new(v), UnsafeCell::new(h))
     }
     fn lock<F, R>(&self, f: F) -> R
     where
@@ -245,7 +244,7 @@ fn run_all(
         "name", "average", "median", "std.dev."
     );
 
-    run_benchmark_iterations::<parking_lot::Mutex<f64>>(
+    run_benchmark_iterations::<parking_lot_rt::Mutex<f64>>(
         num_threads,
         work_per_critical_section,
         work_between_critical_sections,
