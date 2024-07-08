@@ -42,6 +42,21 @@ impl<T> Mutex<T> for std::sync::Mutex<T> {
     }
 }
 
+impl<T> Mutex<T> for rtsc::pi::Mutex<T> {
+    fn new(v: T) -> Self {
+        Self::new(v)
+    }
+    fn lock<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut T) -> R,
+    {
+        f(&mut *self.lock())
+    }
+    fn name() -> &'static str {
+        "rtsc::pi::Mutex"
+    }
+}
+
 impl<T> Mutex<T> for parking_lot_rt::Mutex<T> {
     fn new(v: T) -> Self {
         Self::new(v)
@@ -245,6 +260,14 @@ fn run_all(
     );
 
     run_benchmark_iterations::<parking_lot_rt::Mutex<f64>>(
+        num_threads,
+        work_per_critical_section,
+        work_between_critical_sections,
+        seconds_per_test,
+        test_iterations,
+    );
+
+    run_benchmark_iterations::<rtsc::pi::Mutex<f64>>(
         num_threads,
         work_per_critical_section,
         work_between_critical_sections,
